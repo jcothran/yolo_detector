@@ -1,4 +1,4 @@
-# Seal Detection
+# YOLO Detection
 
 Pre-trained ML models to detect COCO object(best_yolo),seals(best_seal) in images, and APIs to use the models.
 
