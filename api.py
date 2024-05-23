@@ -186,8 +186,8 @@ def yolo_from_upload(
     file: UploadFile,
     yolo: Any = Depends(get_yolo_model),
     threshold: float = Query(..., description="A floating point threshold confidence value between 0.01 and 0.99"),
-    slice_width: int = Query(..., description="An integer image slice pixel width value, preferably multiple of 32"),
-    slice_height: int = Query(..., description="An integer image slice pixel height value, preferably multiple of 32"),
+    slice_width: int = Query(..., description="An integer image slice pixel width value, preferably multiple of 32 and same value as slice_height"),
+    slice_height: int = Query(..., description="An integer image slice pixel height value, preferably multiple of 32 and same value as slice_width"),
     classes: str = Query(..., description="A comma separated list of object class names of interest"),
     gpu: str = Query(..., description="Y for GPU, N for CPU"),      
 ):
