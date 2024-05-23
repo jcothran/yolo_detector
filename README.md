@@ -97,5 +97,12 @@ https://www.ridgerun.ai/post/improving-detection-performance-with-sahi-and-tiled
 
 https://github.com/obss/sahi
 
+Persons on the beach, good contrast/silhouettes, a few false positives and persons towards the horizon are only a few pixels tall/wide and not able to detect without too many additional false positives
+
+confidence=0.1,slice width/height=512,count=43, COCO dataset
 ![person](person_0.1_512_43_nolabel.jpg "person")
+
+Birds on a boardwalk, perhaps poor contrast(lighting,time of day) with birds in upper left causing missed counts, false positives on shadows could be corrected with separate 'shadow' class trained
+
+confidence=0.1,slice width/height=512,count=36, COCO dataset
 ![bird](bird_0.1_512_36.jpg "bird")
