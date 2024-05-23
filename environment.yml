@@ -19,6 +19,7 @@ dependencies:
   - tensorflow
   - torchvision
   - ultralytics
+  - sahi
   # For managing large git files
   - git-lfs
   # Testing related

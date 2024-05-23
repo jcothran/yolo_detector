@@ -3,7 +3,7 @@ import os
 from typing import Any
 from pathlib import Path
 from pydantic import BaseModel
-from fastapi import FastAPI, Depends, UploadFile, Request
+from fastapi import FastAPI, Depends, UploadFile, Request, Query
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from tf_processing import tf_process_image, TF_MODELS
@@ -185,6 +185,11 @@ def yolo_from_upload(
     version: YOLOModelVersion,
     file: UploadFile,
     yolo: Any = Depends(get_yolo_model),
+    threshold: float = Query(..., description="A floating point threshold confidence value between 0.01 and 0.99"),
+    slice_width: int = Query(..., description="An integer image slice pixel width value, preferably multiple of 32"),
+    slice_height: int = Query(..., description="An integer image slice pixel height value, preferably multiple of 32"),
+    classes: str = Query(..., description="A comma separated list of object class names of interest"),
+    gpu: str = Query(..., description="Y for GPU, N for CPU"),      
 ):
     """Perform model prediction based on selected YOLOv8 model / version."""
     bytedata = file.file.read()
@@ -199,6 +204,11 @@ def yolo_from_upload(
         output_path,
         model,
         version,
+        threshold,
+        slice_width,
+        slice_height,
+        classes,
+        gpu,
         name,
         bytedata
     )

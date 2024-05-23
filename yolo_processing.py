@@ -2,17 +2,25 @@ import os
 from typing import Union
 import cv2
 import numpy as np
-from ultralytics import YOLO
+from ultralytics import YOLO #FIX? - if SAHI/slicing already includes this, might be able to remove this import and other code related to pulling the YOLO model with reference to the previous single pass processing?
 from pathlib import Path
 from score import ClassificationModelResult, BoundingBoxPoint
 from model_version import ModelFramework, YOLOModelName, YOLOModelVersion
 from metrics import increment_yolo_counter
 import logging
 
+#from sahi.utils.yolov8 import (
+#    download_yolov8s_model,
+#)
+
+from sahi import AutoDetectionModel
+#from sahi.utils.cv import read_image
+#from sahi.utils.file import download_from_url
+from sahi.predict import get_prediction, get_sliced_prediction, predict
+#from IPython.display import Image
+
 logger = logging.getLogger( __name__ )
-width = 896
-height = 896
-threshold = 0.5
+
 font = cv2.FONT_HERSHEY_SIMPLEX
 
 MODEL_FOLDER = Path(os.environ.get(
@@ -22,18 +30,23 @@ MODEL_FOLDER = Path(os.environ.get(
 
 YOLO_MODELS = {
     "best_yolo": {
-        "1": YOLO(str(MODEL_FOLDER / "yolo" / "best_yolo" / "1" / "best_seal.pt" )),
-    }
+        "1": YOLO(str(MODEL_FOLDER / "yolo" / "best_yolo" / "1" / "yolov8n.pt" )),
+    },
+    "best_seal": {
+        "1": YOLO(str(MODEL_FOLDER / "yolo" / "best_seal" / "1" / "best_seal.pt" )),
+    }    
 }
-
-#SEAL_CLASSIFICATION = 0.0
-
 
 def yolo_process_image(
     yolo_model: YOLO,
     output_path: Path,
     model: Union[YOLOModelName, str],
     version: Union[YOLOModelVersion, str],
+    yolo_threshold: float,
+    api_slice_width: int,
+    api_slice_height: int,
+    cls_names_valid: str,
+    gpu_choice: str,    
     name: str,
     bytedata: bytes
 ):
@@ -53,11 +66,14 @@ def yolo_process_image(
     assert isinstance( model, ( YOLOModelName, str ) )
     assert isinstance( version, ( YOLOModelVersion, str ) )
 
+
     if( isinstance( model, YOLOModelName ) ):
         model = model.value
 
     if( isinstance( version, YOLOModelVersion ) ):
         version = version.value
+
+
 
     ret: ClassificationModelResult = ClassificationModelResult(
         ModelFramework.YOLO.name,
@@ -74,65 +90,103 @@ def yolo_process_image(
     img_boxes = frame
 
     #use YOLOv8
-    results = yolo_model.predict(frame, conf = 0.2)
+    #results = yolo_model.predict(frame, conf = yolo_threshold)
+
+    #could add other .pt file choices here based on model/version settings
+    pt_file = "yolov8n.pt" #default file
+    
+    if model == "best_seal" and version == "1":
+        pt_file ="best_seal.pt"
+
+    device_choice = "cpu" #default choice
+    if gpu_choice == "Y":
+        device_choice = "cuda:0"
+
+    detection_model = AutoDetectionModel.from_pretrained(
+        model_type="yolov8",
+        model_path=str(MODEL_FOLDER / "yolo" / model / version / pt_file ),
+        confidence_threshold=yolo_threshold,
+        #device="cpu",  # or 'cuda:0'
+        device=device_choice,
+    )
+
+    result = get_sliced_prediction(
+        frame,
+        detection_model,
+        slice_height = api_slice_height, 
+        slice_width = api_slice_width, 
+        overlap_height_ratio = 0.2,
+        overlap_width_ratio = 0.2
+    )
 
     # If any score is above threshold, flag it as detected
     detected = False
 
-    for result in results:
-        #for score, cls, cls_name, bbox in zip(result.boxes.conf, result.boxes.cls, result.names, result.boxes.xyxy):
-        for box in result.boxes:
+    # The result is a list of predictions.
+    predictions = result.object_prediction_list
+    print(f'There were {len(predictions)} predictions total!')
+
+    detections_passed = 0
     
-            score = box.conf.item()
-            cls = int(box.cls.item())
-            cls_name = yolo_model.names[cls]
+    for prediction in predictions:
+        bbox = prediction.bbox
 
-            if score < threshold:
-                continue
+        cls_name = prediction.category.name
+        
+        score = prediction.score.value
+        if score < yolo_threshold:
+            continue
 
-            detected = True
+        #FIX - should be able to filter for only class id of interest in function flags
+        #if cls_name == "boat" or cls_name == "horse" or cls_name == "bus" or cls_name == "train" or cls_name == "motorcycle":
+        #    continue
 
-            x1, y1, x2, y2 = box.xyxy.tolist()[0]
-            h, w, _ = frame.shape
+        #if cls_name != "bird":
+        #    continue
+        
+        if cls_name not in cls_names_valid:
+            continue
 
-            y_min = int(max(1, y1))
-            x_min = int(max(1, x1))
-            y_max = int(min(h, y2))
-            x_max = int(min(w, x2))
+        if cls_name is not None:
+            print (cls_name) #a dictionary name lookup based on integer index
             
-            if cls is not None:
-                print (cls_name) #a dictionary name lookup based on integer index
-                
-                label = cls_name + ": " + ": {:.2f}%".format(score * 100)
+            detected = True
+            detections_passed += 1
+            
+            x1 = int(bbox.minx)
+            y1 = int(bbox.miny)
+            x2 = int(bbox.maxx)
+            y2 = int(bbox.maxy)
+ 
+            # Update Prometheus metrics
+            increment_yolo_counter(
+                ModelFramework.YOLO.name,
+                model,
+                version,
+                cls_name 
+            )
 
-                # Update Prometheus metrics
-                increment_yolo_counter(
-                    ModelFramework.YOLO.name,
-                    model,
-                    version,
-                    cls_name 
-                )
-                 
-                img_boxes = cv2.rectangle(img_boxes, (x_min, y_max), (x_max, y_min), (0, 0, 255), 2)
-                cv2.putText(img_boxes, label, (x_min, y_max - 10), font, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
+            label = cls_name + ": " + ": {:d}%".format(int(score * 100))             
+            img_boxes = cv2.rectangle(img_boxes, (x1, y2), (x2, y1), (255, 255, 255), 1)
+            cv2.putText(img_boxes, label, (x1, y2 - 10), font, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
 
-                ret.add(
-                    classification_name=cls_name,
-                    classification_score=score,
-                    bbox=(
-                        BoundingBoxPoint( x_min, y_min ),
-                        BoundingBoxPoint( x_max, y_max ),
-                    )
+            ret.add(
+                classification_name=cls_name,
+                classification_score=score,
+                bbox=(
+                    BoundingBoxPoint( x1, y1 ),
+                    BoundingBoxPoint( x2, y2 ),
                 )
-            else:
-                raise Exception(
-                    f"Classification {cls} not handled, model names "
-                    f"are: {repr(yolo_model.names)}"
-                )
-
-    # outp = cv2.resize(img_boxes, (1280, 720))
+            )
+        else:
+            raise Exception(
+                f"Classification {cls_name} not handled, model names "
+                f"are: {repr(yolo_model.names)}"
+            )
 
     if detected is True:
+
+        print(f'There were {detections_passed} detections passed!')
 
         output_file.parent.mkdir(parents=True, exist_ok=True)
         cv2.imwrite(str(output_file), img_boxes )
