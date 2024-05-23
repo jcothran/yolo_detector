@@ -89,3 +89,12 @@ Run model version 3
 ```shell
 python ./test/stream_effdet3.py
 ```
+## SAHI: Slicing Aided Hyper Inferencebased examples
+
+Processing a large image as a set of smaller images(slices) to improve object detection performance with small objects in large images
+
+https://www.ridgerun.ai/post/improving-detection-performance-with-sahi-and-tiled-predictions
+https://github.com/obss/sahi
+
+![person](person_0.1_512_43_nolabel.jpg "person")
+![bird](bird_0.1_512_36.jpg "bird")
