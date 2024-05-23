@@ -55,6 +55,7 @@ And then tested the same as running it outside of Docker
 ```shell
 python ./test/test_api.py
 ```
+![FastAPI_YOLO](fast_api_yolo.jpg "FastAPI YOLO")
 
 ## Tensorflow Serving
 
