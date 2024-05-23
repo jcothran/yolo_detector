@@ -94,6 +94,7 @@ python ./test/stream_effdet3.py
 Processing a large image as a set of smaller images(slices) to improve object detection performance with small objects in large images
 
 https://www.ridgerun.ai/post/improving-detection-performance-with-sahi-and-tiled-predictions
+
 https://github.com/obss/sahi
 
 ![person](person_0.1_512_43_nolabel.jpg "person")
