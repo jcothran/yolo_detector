@@ -91,13 +91,13 @@ python ./test/stream_effdet3.py
 ```
 ## SAHI: Slicing Aided Hyper Inferencebased examples
 
-Processing a large image as a set of smaller images(slices) to improve object detection performance with small objects in large images
+Processing a large image as a set of smaller images(slices) to improve object detection performance with small objects in large images. Trade-off between increased detections with increased number of sub-image detection passes.
 
 https://www.ridgerun.ai/post/improving-detection-performance-with-sahi-and-tiled-predictions
 
 https://github.com/obss/sahi
 
-Persons on the beach, good contrast/silhouettes, a few false positives and persons towards the horizon are only a few pixels tall/wide and not able to detect without too many additional false positives
+Persons on the beach, good contrast/silhouettes, a few false positives and persons towards the horizon are only a few pixels tall/wide and not able to detect by lowering confidence or slice size without too many additional false positives
 
 confidence=0.1,slice width/height=512,count=43, COCO dataset
 ![person](person_0.1_512_43_nolabel.jpg "person")
