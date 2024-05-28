@@ -106,3 +106,12 @@ Birds on a boardwalk, perhaps poor contrast(lighting,time of day) with birds in 
 
 confidence=0.1,slice width/height=512,count=36, COCO dataset
 ![bird](bird_0.1_512_36.jpg "bird")
+
+Seals on the beach, 8 detections and 1 false positive in the water, maybe more training images needed?
+
+confidence=0.1,slice width/height=512
+![seal](annotated.yolo.best_seal.v1.tmmc_prls-2024-05-23-230332Z.jpg "seal")
+
+Previous single pass processing with 2 detections
+
+![seal](seal_0.1_512.jpg "seal")
